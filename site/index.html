@@ -122,31 +122,32 @@
   .modalScan{ position:absolute; left:-120%; right:-120%; top:0; height:2px; opacity:.4; background:linear-gradient(90deg, transparent, var(--neon), var(--neon-2), transparent); animation:scan 2s linear infinite; }
   @keyframes scan{ 0%{ transform:translateX(-40%) } 100%{ transform:translateX(40%) } }
 
-  /* ====== MOBILE: logo plus grand & rapproché des stats ====== */
+  /* ====== MOBILE (Méthode 2: zoom visuel du logo) ====== */
   @media (max-width: 768px){
     html, body{ height:auto; min-height:100%; overflow:auto; }
     .fit{ height:auto; min-height:100dvh; overflow:visible; display:block; }
     .stage{ width:auto; height:auto; min-height:100%; transform:none; padding:12px; }
 
+    /* On réserve une zone raisonnable, et on zoome le logo visuellement */
     .logoStage{
       position:relative; inset:auto;
-      height:620px;            /* plus haut pour laisser un logo plus grand */
-      margin-bottom:6px;       /* rapproché du panneau stats */
+      height:520px;          /* hauteur “conteneur” */
+      margin-bottom:6px;     /* rapproche du panel stats */
       display:grid; place-items:center;
     }
     .logo{
-      width:min(500vw, 500px);  /* plus grand mais safe */
-      height:min(500vw, 500px);
+      width:min(88vw, 360px);
+      height:min(88vw, 360px);
+      transform: scale(1.35);           /* ← zoom visuel */
+      transform-origin: center center;   /* reste bien centré */
     }
 
     .piePanel, .panel{ position:relative; left:auto; right:auto; top:auto; width:auto; max-height:none; z-index:auto; margin:0 0 12px 0; }
+    #pie{ width:100%; height:auto; max-width:480px; }
     .list{ max-height:none; overflow:visible; }
     .item{ grid-template-columns:44px 1fr 100px; min-height:68px; column-gap:18px; row-gap:10px; }
     .cell-play{ width:44px; height:44px; }
     .play{ width:40px; height:40px; }
-
-    .piePanel .box:first-of-type{ display:block !important; }
-    #pie{ width:100%; height:auto; max-width:480px; }
 
     .panel .titlebar{ position:sticky; top:0; z-index:5; }
     .toast{ position:fixed; left:12px; bottom:12px; }
