@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>SON DU MOIS</title>
+<title>ADN — Console • Stats + Sons</title>
 <style>
   :root{
     --bg:#000; --fg:#c8facc; --accent:#00ff66; --muted:#6be08f; --border:#0f3d22;
     --pieA:#00ff66; --pieB:#1be072; --pieC:#15c863; --pieD:#10b058; --pieE:#0b964b; --pieF:#087c3e; --pieG:#066435;
-    --neon:#00ff99; --neon-2:#5affc1;
+    --neon:#00ff99; --neon-2:#5affc1; --hot:#33ffd1; --hot2:#b7ffe9;
 
     /* Desktop: scène de référence (UI identique) */
     --design-w: 1280;  /* px */
@@ -82,15 +82,15 @@
   button:hover{filter:brightness(1.1)}
   .muted{color:var(--muted)}
 
-  .list{display:flex;flex-direction:column;gap:8px;overflow:auto}
+  .list{display:flex;flex-direction:column;gap:10px;overflow:auto}
   .item{
     position:relative;
     display:grid;
-    grid-template-columns:48px 1fr 104px;
-    column-gap:16px; row-gap:12px;  /* + d’air entre barre et vote */
+    grid-template-columns:48px 1fr 116px;  /* vote un peu plus large */
+    column-gap:20px; row-gap:12px;        /* + d’air */
     align-items:center;
-    border:2px solid var(--border); padding:10px; background:#03140b; border-radius:0;
-    overflow:hidden; min-height:72px;
+    border:2px solid var(--border); padding:12px; background:#03140b; border-radius:0;
+    overflow:hidden; min-height:78px;
   }
   .rowFlash{
     position:absolute; inset:0; pointer-events:none; opacity:0;
@@ -123,7 +123,7 @@
     animation:btnScan 1.1s cubic-bezier(.22,1,.36,1) infinite; opacity:.35;
   }
 
-  .track{ min-width:0; display:flex; flex-direction:column; gap:6px; }
+  .track{ min-width:0; display:flex; flex-direction:column; gap:8px; }
   .track h3{
     margin:0; font-size:14px; color:var(--fg);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;
@@ -157,31 +157,33 @@
   .vote{
     position:relative;
     display:inline-flex; align-items:center; justify-content:center;
-    width:100%; height:40px;
+    width:100%; height:44px;
     border:2px solid var(--border); background:#062011; color:var(--accent);
     overflow:hidden;
+    isolation:isolate;
   }
-  .score{font-weight:700;color:#b9ffd0; font-size:15px; line-height:1;}
+  .score{font-weight:700;color:#b9ffd0; font-size:16px; line-height:1;}
   .vote.voted{ border-color:#10a86b; box-shadow:0 0 8px rgba(0,255,153,.35) inset; }
 
   /* bump + halo */
   @keyframes voteBump{ 0%{transform:scale(1)} 40%{transform:scale(1.16)} 100%{transform:scale(1)} }
-  @keyframes voteHalo{ 0%{opacity:.6; transform:scale(1)} 100%{opacity:0; transform:scale(1.8)} }
+  @keyframes voteHalo{ 0%{opacity:.7; transform:scale(1)} 100%{opacity:0; transform:scale(2)} }
   .vote.bump .score{ animation:voteBump .35s ease-out; }
   .vote.bump::after{
-    content:""; position:absolute; inset:-4px; border:2px solid var(--neon);
-    opacity:0; border-radius:0; animation:voteHalo .45s ease-out forwards;
+    content:""; position:absolute; inset:-6px; border:2px solid var(--hot);
+    filter:blur(0.5px); opacity:0; border-radius:0; animation:voteHalo .5s ease-out forwards;
   }
 
-  /* petit +1/-1 qui pop */
-  .pop{
-    position:absolute; font-weight:700; font-size:12px; pointer-events:none;
-    animation:popUp .6s ease-out forwards;
+  /* Confettis néon */
+  .confetti{
+    position:absolute; width:6px; height:6px; pointer-events:none; z-index:2;
+    background:linear-gradient(135deg, var(--neon), var(--hot2));
+    animation:fly .8s cubic-bezier(.2,.6,.1,1) forwards;
   }
-  @keyframes popUp{
-    0%{ transform:translateY(6px); opacity:0 }
-    20%{ opacity:1 }
-    100%{ transform:translateY(-14px); opacity:0 }
+  @keyframes fly{
+    0%{ transform:translate(0,0) scale(1); opacity:1 }
+    80%{ opacity:1 }
+    100%{ transform:translate(var(--dx), var(--dy)) rotate(180deg) scale(.6); opacity:0 }
   }
 
   .legend{display:flex;flex-direction:column;gap:4px;overflow:auto}
@@ -204,6 +206,36 @@
   @keyframes neonPulse{ 0%,100%{ filter:brightness(1) } 50%{ filter:brightness(1.25) } }
   @keyframes btnScan{ 0%{ left:-120% } 100%{ left:120% } }
 
+  /* ===== Modal d’accueil ===== */
+  .modalBack{
+    position:fixed; inset:0; background:rgba(0,0,0,.7);
+    display:none; align-items:center; justify-content:center; z-index:50;
+    backdrop-filter: blur(2px);
+  }
+  .modalBack.show{ display:flex; }
+  .modal{
+    border:2px solid var(--border); background:#03140b; width:min(520px, 92vw);
+    box-shadow:0 0 18px rgba(0,255,153,.25), inset 0 0 8px rgba(0,255,153,.15);
+    padding:18px; text-align:center; position:relative;
+  }
+  .modalTitle{
+    color:var(--accent); letter-spacing:.08em; margin:0 0 10px 0; text-transform:uppercase;
+  }
+  .modalMsg{
+    font-size:18px; color:#dfffea; text-shadow:0 0 8px rgba(0,255,153,.25);
+  }
+  .modalBtn{
+    margin-top:14px; display:inline-block; border:2px solid var(--border); padding:10px 14px;
+    background:#062011; color:var(--accent); cursor:pointer;
+  }
+  .modalBtn:hover{ filter:brightness(1.1); }
+  .modalScan{
+    position:absolute; left:-120%; right:-120%; top:0; height:2px; opacity:.4;
+    background:linear-gradient(90deg, transparent, var(--neon), var(--neon-2), transparent);
+    animation:scan 2s linear infinite;
+  }
+  @keyframes scan{ 0%{ transform:translateX(-40%) } 100%{ transform:translateX(40%) } }
+
   /* ====== VERSION MOBILE (empilée, scroll) ====== */
   @media (max-width: 768px){
     /* PATCH SCROLL MOBILE */
@@ -218,12 +250,12 @@
       transform:none; padding:12px;
     }
 
-    /* Logo plus grand */
+    /* Logo BEAUCOUP plus grand */
     .logoStage{
-      position:relative; inset:auto; height:240px; margin-bottom:12px;
+      position:relative; inset:auto; height:320px; margin-bottom:12px;
       display:grid; place-items:center;
     }
-    .logo{ width:220px; height:220px; }
+    .logo{ width:300px; height:300px; }
 
     .piePanel, .panel{
       position:relative; left:auto; right:auto; top:auto; width:auto;
@@ -231,7 +263,8 @@
     }
     .list{ max-height:none; overflow:visible; }
     .item{
-      grid-template-columns:44px 1fr 88px; min-height:64px; column-gap:16px; row-gap:10px;
+      grid-template-columns:44px 1fr 100px; min-height:68px;
+      column-gap:18px; row-gap:10px;
     }
     .cell-play{ width:44px; height:44px; }
     .play{ width:40px; height:40px; }
@@ -267,11 +300,21 @@
             <button id="sortBtn" title="tri par votes">sort --by=votes</button>
           </div>
         </header>
-        <div class="box muted" id="hint">VOTE POUR TES FAV</div>
+        <div class="box muted" id="hint">VOTE POUR TES MAQUETTE FAVORIS</div>
         <div class="box list" id="list" aria-live="polite"></div>
       </section>
 
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Modal d’accueil -->
+  <div class="modalBack" id="welcome">
+    <div class="modal">
+      <div class="modalScan"></div>
+      <h3 class="modalTitle">~/welcome</h3>
+      <div class="modalMsg">CHOISIS LE SON QUE JE REC POUR CE MOIS LE S</div>
+      <div class="modalBtn" id="welcomeOk">ok</div>
     </div>
   </div>
 
@@ -302,6 +345,17 @@
     const canvas=document.getElementById('pie');
     const ctx=canvas.getContext('2d');
     const $flash=document.getElementById('flash');
+
+    // ---- Modal d’accueil (une seule fois) ----
+    const $welcome=document.getElementById('welcome');
+    const $welcomeOk=document.getElementById('welcomeOk');
+    if(!localStorage.getItem('adn_intro_seen')){
+      $welcome.classList.add('show');
+    }
+    $welcomeOk.addEventListener('click', ()=>{
+      $welcome.classList.remove('show');
+      localStorage.setItem('adn_intro_seen','1');
+    });
 
     const fmt=s=>{ if(!isFinite(s)) return '0:00'; const m=Math.floor(s/60), ss=String(Math.floor(s%60)).padStart(2,'0'); return `${m}:${ss}`; };
     const toast=m=>{ $toast.textContent=m; $toast.classList.add('show'); setTimeout(()=> $toast.classList.remove('show'), 1200); };
@@ -381,10 +435,8 @@
         audio.addEventListener('loadedmetadata',()=> el.querySelector('.meta .time').textContent=fmt(audio.duration));
         state.audios.set(t.id,audio);
       } else {
-        // si on rerend, rafraîchit l'info durée connue
         if(isFinite(audio.duration)) el.querySelector('.meta .time').textContent=fmt(audio.duration);
       }
-      // icône selon l’état
       if(!audio.paused){ icon(el,'pause'); }
 
       // Hover du play => scanline sur la barre de CETTE ligne (desktop)
@@ -438,8 +490,10 @@
         }
       });
 
-      // Vote / unvote + animations
+      // Vote / unvote + animations (flashy + confettis)
       voteBtn.addEventListener('click', async ()=>{
+        const conf = ()=> confetti(voteBtn);
+
         if(state.hasVoted.has(t.id)){
           const { error } = await supabase.from('votes').delete().match({ track_id:t.id, voter_token:state.voterToken });
           if(error){ console.error(error); toast('error: unvote'); return; }
@@ -447,8 +501,8 @@
           state.counts.set(t.id, Math.max(0,(state.counts.get(t.id)||0)-1));
           scoreEl.textContent = state.counts.get(t.id);
           voteBtn.classList.remove('voted');
-          pop(voteBtn, '-1', '#ff9aa2');
           bump(voteBtn);
+          conf(); conf(); // petite pluie
           updateChartTargets();
           toast('vote removed');
         } else {
@@ -458,8 +512,8 @@
           state.counts.set(t.id, (state.counts.get(t.id)||0)+1);
           scoreEl.textContent = state.counts.get(t.id);
           voteBtn.classList.add('voted');
-          pop(voteBtn, '+1', '#b9ffd0');
           bump(voteBtn);
+          conf(); conf(); conf(); // un peu plus à l’upvote
           updateChartTargets();
           toast('vote added');
         }
@@ -470,12 +524,21 @@
       return el;
     }
 
-    function pop(btn, text, color){
-      const s=document.createElement('span');
-      s.className='pop'; s.textContent=text;
-      s.style.color=color; s.style.top='8px'; s.style.right='8px';
-      btn.appendChild(s);
-      setTimeout(()=> s.remove(), 650);
+    function confetti(btn){
+      const rect=btn.getBoundingClientRect();
+      const cx=rect.width/2, cy=rect.height/2;
+      for(let i=0;i<7;i++){
+        const s=document.createElement('span');
+        s.className='confetti';
+        s.style.left = (cx-3)+'px';
+        s.style.top  = (cy-3)+'px';
+        const dx = (Math.random()*120-60)+'px';
+        const dy = (-50 - Math.random()*70)+'px';
+        s.style.setProperty('--dx', dx);
+        s.style.setProperty('--dy', dy);
+        btn.appendChild(s);
+        setTimeout(()=> s.remove(), 850);
+      }
     }
     function bump(btn){
       btn.classList.remove('bump'); void btn.offsetWidth; btn.classList.add('bump');
@@ -539,7 +602,6 @@
     function renderLegend(values, colors, names){
       const $legend=document.getElementById('legend'); $legend.innerHTML='';
       const sum = values.reduce((a,b)=>a+b,0);
-      // on affiche aussi en décroissant
       const order=[...names.keys()].sort((i,j)=>(values[j]-values[i]));
       order.forEach((i)=>{
         const v=values[i], name=names[i], col=colors[i];
@@ -604,7 +666,6 @@
         const mid=(a0+a1)/2;
         const rx = cx + Math.cos(mid)*(r*0.62);
         const ry = cy + Math.sin(mid)*(r*0.62);
-        // largeur approximative dispo
         const arcLen = (a1-a0) * r * 0.9;
         const text = clampText(ctx, name, Math.max(40, arcLen));
         ctx.fillText(text, rx, ry);
