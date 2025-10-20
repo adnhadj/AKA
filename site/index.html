@@ -181,12 +181,23 @@
 
   /* ====== VERSION MOBILE (empilée, scroll) ====== */
   @media (max-width: 768px){
-    html, body{ overflow:auto; }           /* on re-permet le scroll */
-    .fit{ display:block; }                 /* le wrapper n'est plus un centrage rigide */
+    /* PATCH SCROLL MOBILE — lève les verrous de hauteur & overflow */
+    html, body{
+      height:auto;          /* au lieu de 100% */
+      min-height:100%;
+      overflow:auto;        /* re-permet le scroll de la page */
+    }
+    .fit{
+      height:auto;          /* évite 100vh dur */
+      min-height:100dvh;    /* hauteur dynamique fiable mobile */
+      overflow:visible;     /* pas de clipping */
+      display:block;
+    }
     .stage{
       width:auto; height:auto;
-      transform:none;                      /* pas d’échelle fixe sur mobile */
-      padding:12px;                        /* respiration autour du contenu */
+      min-height:100%;
+      transform:none;       /* pas d’échelle fixe sur mobile */
+      padding:12px;         /* respiration */
     }
 
     /* Logo compact en haut de page */
@@ -196,29 +207,35 @@
     }
     .logo{ width:140px; height:140px; }
 
-    /* Les panneaux deviennent des sections bloc empilées qui se suivent */
+    /* Les panneaux deviennent des sections empilées */
     .piePanel,
     .panel{
-      position:relative; left:auto; right:auto; top:auto; width:auto; max-height:none; z-index:auto;
-      margin:0 0 12px 0;
+      position:relative; left:auto; right:auto; top:auto; width:auto;
+      max-height:none; z-index:auto; margin:0 0 12px 0;
     }
 
-    /* La liste prend la largeur du viewport */
+    /* La liste pousse la page (pas de scroll interne) */
+    .list{
+      max-height:none;
+      overflow:visible;
+    }
+
+    /* Items un peu plus compacts */
     .item{
-      grid-template-columns:44px 1fr 88px;   /* un peu plus compact */
+      grid-template-columns:44px 1fr 88px;
       min-height:64px;
     }
     .cell-play{ width:44px; height:44px; }
     .play{ width:40px; height:40px; }
 
-    /* Le camembert passe à 100% avec un canvas plus petit */
+    /* Camembert fluide */
     .piePanel .box:first-of-type{ display:block !important; }
     #pie{ width:100%; height:auto; max-width:480px; }
 
-    /* Astuce: un petit “header” sémantique pour la section tracks */
+    /* Header tracks sticky pour confort */
     .panel .titlebar{ position:sticky; top:0; z-index:5; }
 
-    /* Le toast flotte toujours mais reste visible au scroll */
+    /* Le toast peut rester fixed, mais c'est OK ainsi */
     .toast{ position:fixed; left:12px; bottom:12px; }
   }
 </style>
