@@ -122,19 +122,32 @@
   .modalScan{ position:absolute; left:-120%; right:-120%; top:0; height:2px; opacity:.4; background:linear-gradient(90deg, transparent, var(--neon), var(--neon-2), transparent); animation:scan 2s linear infinite; }
   @keyframes scan{ 0%{ transform:translateX(-40%) } 100%{ transform:translateX(40%) } }
 
+  /* ====== MOBILE: logo plus grand & rapproché des stats ====== */
   @media (max-width: 768px){
     html, body{ height:auto; min-height:100%; overflow:auto; }
     .fit{ height:auto; min-height:100dvh; overflow:visible; display:block; }
     .stage{ width:auto; height:auto; min-height:100%; transform:none; padding:12px; }
-    .logoStage{ position:relative; inset:auto; height:520px; margin-bottom:12px; display:grid; place-items:center; }
-    .logo{ width:300px; height:300px; }
+
+    .logoStage{
+      position:relative; inset:auto;
+      height:620px;            /* plus haut pour laisser un logo plus grand */
+      margin-bottom:6px;       /* rapproché du panneau stats */
+      display:grid; place-items:center;
+    }
+    .logo{
+      width:min(88vw, 380px);  /* plus grand mais safe */
+      height:min(88vw, 380px);
+    }
+
     .piePanel, .panel{ position:relative; left:auto; right:auto; top:auto; width:auto; max-height:none; z-index:auto; margin:0 0 12px 0; }
     .list{ max-height:none; overflow:visible; }
     .item{ grid-template-columns:44px 1fr 100px; min-height:68px; column-gap:18px; row-gap:10px; }
     .cell-play{ width:44px; height:44px; }
     .play{ width:40px; height:40px; }
+
     .piePanel .box:first-of-type{ display:block !important; }
     #pie{ width:100%; height:auto; max-width:480px; }
+
     .panel .titlebar{ position:sticky; top:0; z-index:5; }
     .toast{ position:fixed; left:12px; bottom:12px; }
   }
@@ -169,6 +182,7 @@
     </div>
   </div>
 
+  <!-- Modal d’accueil -->
   <div class="modalBack" id="welcome">
     <div class="modal">
       <h3 class="modalTitle">~/welcome</h3>
@@ -222,7 +236,7 @@
       return PIE_COLS.getPropertyValue(pool[i % pool.length]).trim();
     }
 
-    // 1 vote max — helpers
+    // 1 vote max — helpers (nécessite la fonction SQL 'switch_vote')
     function getMyVoteTrackId() {
       const ids = Array.from(state.hasVoted.values());
       return ids.length ? ids[0] : null;
@@ -235,7 +249,7 @@
       return { error };
     }
 
-    // Tri manuel via bouton (n'affecte pas les votes)
+    // Tri manuel via bouton
     $sortBtn.addEventListener('click', ()=>{
       state.sortByVotes = !state.sortByVotes;
       $sortBtn.textContent = state.sortByVotes ? 'sort --by=date' : 'sort --by=votes';
@@ -263,7 +277,7 @@
       state.counts = new Map();
       (allVotes||[]).forEach(v=> state.counts.set(v.track_id,(state.counts.get(v.track_id)||0)+1));
 
-      // au plus 1 vote pour ce user
+      // au plus 1 vote pour ce user (le plus récent)
       const myId = (mine && mine.length) ? mine[0].track_id : null;
       state.hasVoted = new Set(myId ? [myId] : []);
 
@@ -437,6 +451,7 @@
       tick();
     }
 
+    /* ===== Camembert ===== */
     function updateChartTargets(){
       if(!state.tracks.length){
         $total.textContent = 'votes: 0';
@@ -498,7 +513,9 @@
       const nr = Math.max(0, Math.min(255, Math.round(r*f)));
       const ng = Math.max(0, Math.min(255, Math.round(g*f)));
       const nb = Math.max(0, Math.min(255, Math.round(b*f)));
-      return '#' + nr.toString(16).padStart(2,'0') + ng.toString(16).padStart(2,'0') + nb.toString(16,'0');
+      return '#' + nr.toString(16).padStart(2,'0')
+             + ng.toString(16).padStart(2,'0')
+             + nb.toString(16).padStart(2,'0');
     }
 
     function setupRealtime(){
