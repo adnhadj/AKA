@@ -87,7 +87,8 @@
     position:relative;
     display:grid;
     grid-template-columns:48px 1fr 104px;
-    gap:12px; align-items:center;
+    column-gap:16px; row-gap:12px;  /* + d’air entre barre et vote */
+    align-items:center;
     border:2px solid var(--border); padding:10px; background:#03140b; border-radius:0;
     overflow:hidden; min-height:72px;
   }
@@ -152,12 +153,36 @@
     background:repeating-linear-gradient(90deg,#00ff66 0 8px,#14c977 8px 16px)}
   .meta{font-size:12px;color:var(--muted);line-height:1}
 
+  /* ===== Vote button (uniquement le compteur) + animations ===== */
   .vote{
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    position:relative;
+    display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:40px;
     border:2px solid var(--border); background:#062011; color:var(--accent);
+    overflow:hidden;
   }
-  .score{font-weight:700;color:#b9ffd0}
+  .score{font-weight:700;color:#b9ffd0; font-size:15px; line-height:1;}
+  .vote.voted{ border-color:#10a86b; box-shadow:0 0 8px rgba(0,255,153,.35) inset; }
+
+  /* bump + halo */
+  @keyframes voteBump{ 0%{transform:scale(1)} 40%{transform:scale(1.16)} 100%{transform:scale(1)} }
+  @keyframes voteHalo{ 0%{opacity:.6; transform:scale(1)} 100%{opacity:0; transform:scale(1.8)} }
+  .vote.bump .score{ animation:voteBump .35s ease-out; }
+  .vote.bump::after{
+    content:""; position:absolute; inset:-4px; border:2px solid var(--neon);
+    opacity:0; border-radius:0; animation:voteHalo .45s ease-out forwards;
+  }
+
+  /* petit +1/-1 qui pop */
+  .pop{
+    position:absolute; font-weight:700; font-size:12px; pointer-events:none;
+    animation:popUp .6s ease-out forwards;
+  }
+  @keyframes popUp{
+    0%{ transform:translateY(6px); opacity:0 }
+    20%{ opacity:1 }
+    100%{ transform:translateY(-14px); opacity:0 }
+  }
 
   .legend{display:flex;flex-direction:column;gap:4px;overflow:auto}
   .legend .row{display:flex;align-items:center;gap:8px}
@@ -181,61 +206,40 @@
 
   /* ====== VERSION MOBILE (empilée, scroll) ====== */
   @media (max-width: 768px){
-    /* PATCH SCROLL MOBILE — lève les verrous de hauteur & overflow */
+    /* PATCH SCROLL MOBILE */
     html, body{
-      height:auto;          /* au lieu de 100% */
-      min-height:100%;
-      overflow:auto;        /* re-permet le scroll de la page */
+      height:auto; min-height:100%; overflow:auto;
     }
     .fit{
-      height:auto;          /* évite 100vh dur */
-      min-height:100dvh;    /* hauteur dynamique fiable mobile */
-      overflow:visible;     /* pas de clipping */
-      display:block;
+      height:auto; min-height:100dvh; overflow:visible; display:block;
     }
     .stage{
-      width:auto; height:auto;
-      min-height:100%;
-      transform:none;       /* pas d’échelle fixe sur mobile */
-      padding:12px;         /* respiration */
+      width:auto; height:auto; min-height:100%;
+      transform:none; padding:12px;
     }
 
-    /* Logo compact en haut de page */
+    /* Logo plus grand */
     .logoStage{
-      position:relative; inset:auto; height:160px; margin-bottom:12px;
+      position:relative; inset:auto; height:240px; margin-bottom:12px;
       display:grid; place-items:center;
     }
-    .logo{ width:140px; height:140px; }
+    .logo{ width:220px; height:220px; }
 
-    /* Les panneaux deviennent des sections empilées */
-    .piePanel,
-    .panel{
+    .piePanel, .panel{
       position:relative; left:auto; right:auto; top:auto; width:auto;
       max-height:none; z-index:auto; margin:0 0 12px 0;
     }
-
-    /* La liste pousse la page (pas de scroll interne) */
-    .list{
-      max-height:none;
-      overflow:visible;
-    }
-
-    /* Items un peu plus compacts */
+    .list{ max-height:none; overflow:visible; }
     .item{
-      grid-template-columns:44px 1fr 88px;
-      min-height:64px;
+      grid-template-columns:44px 1fr 88px; min-height:64px; column-gap:16px; row-gap:10px;
     }
     .cell-play{ width:44px; height:44px; }
     .play{ width:40px; height:40px; }
 
-    /* Camembert fluide */
     .piePanel .box:first-of-type{ display:block !important; }
     #pie{ width:100%; height:auto; max-width:480px; }
 
-    /* Header tracks sticky pour confort */
     .panel .titlebar{ position:sticky; top:0; z-index:5; }
-
-    /* Le toast peut rester fixed, mais c'est OK ainsi */
     .toast{ position:fixed; left:12px; bottom:12px; }
   }
 </style>
@@ -260,10 +264,10 @@
         <header class="titlebar">
           <span>~/tracks</span>
           <div class="controls">
-            <button id="sortBtn">sort --by=votes</button>
+            <button id="sortBtn" title="tri par votes">sort --by=votes</button>
           </div>
         </header>
-        <div class="box muted" id="hint"># play/pause • vote/unvote • survoler play ou la barre (desktop) • tap/drag la barre (mobile)</div>
+        <div class="box muted" id="hint">VOTE POUR TES MAQUETTE FAVORIS</div>
         <div class="box list" id="list" aria-live="polite"></div>
       </section>
 
@@ -279,7 +283,7 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const state = {
-      sortByVotes:false,
+      sortByVotes:true,        // tri décroissant par défaut
       voterToken: localStorage.getItem('adn_voter') || (localStorage.setItem('adn_voter', crypto.randomUUID()), localStorage.getItem('adn_voter')),
       audios:new Map(),
       currentId:null,
@@ -313,6 +317,7 @@
     setupRealtime();
     startTicker();
 
+    // --- Data ---
     async function loadData(){
       const [{data:tracks,error:tErr},{data:allVotes,error:vErr},{data:mine,error:mErr}] = await Promise.all([
         supabase.from('tracks').select('id,title,url,created_at'),
@@ -330,10 +335,13 @@
       updateChartTargets();
     }
 
+    // --- UI ---
     function renderList(){
       $list.innerHTML='';
       let data=[...state.tracks];
-      if(state.sortByVotes) data.sort((a,b)=>(state.counts.get(b.id)||0)-(state.counts.get(a.id)||0));
+      // tri décroissant
+      data.sort((a,b)=>(state.counts.get(b.id)||0)-(state.counts.get(a.id)||0));
+
       if(!data.length){
         const p=document.createElement('pre'); p.className='muted'; p.style.margin='0'; p.textContent='$ ls -la  # empty';
         $list.appendChild(p); return;
@@ -352,22 +360,32 @@
           <button class="play" title="play/pause" aria-label="play/pause"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
         </div>
         <div class="track">
-          <h3>${t.title}</h3>
+          <h3 title="${t.title}">${t.title}</h3>
           <div class="progress" role="slider" aria-label="position" aria-valuemin="0" aria-valuemax="100" tabindex="0"><div class="bar"></div></div>
           <div class="meta"><span class="time">0:00</span></div>
         </div>
-        <button class="vote" title="${voted?'remove vote':'vote'}" aria-label="vote">
-          <span class="score">${votes}</span> <span>${voted?'-':'vote'}</span>
+        <button class="vote ${voted?'voted':''}" title="${voted?'retirer vote':'ajouter vote'}" aria-label="vote">
+          <span class="score">${votes}</span>
         </button>
       `;
 
       const playBtn = el.querySelector('.play');
+      const voteBtn = el.querySelector('.vote');
+      const scoreEl = el.querySelector('.score');
       const rowFx  = el.querySelector('.rowFlash');
 
-      // Audio
-      const audio=new Audio(t.url); audio.preload='metadata';
-      audio.addEventListener('loadedmetadata',()=> el.querySelector('.meta .time').textContent=fmt(audio.duration));
-      state.audios.set(t.id,audio);
+      // Audio : réutilise s'il existe déjà
+      let audio = state.audios.get(t.id);
+      if(!audio){
+        audio = new Audio(t.url); audio.preload='metadata';
+        audio.addEventListener('loadedmetadata',()=> el.querySelector('.meta .time').textContent=fmt(audio.duration));
+        state.audios.set(t.id,audio);
+      } else {
+        // si on rerend, rafraîchit l'info durée connue
+        if(isFinite(audio.duration)) el.querySelector('.meta .time').textContent=fmt(audio.duration);
+      }
+      // icône selon l’état
+      if(!audio.paused){ icon(el,'pause'); }
 
       // Hover du play => scanline sur la barre de CETTE ligne (desktop)
       playBtn.addEventListener('mouseenter', ()=> el.classList.add('play-hover'));
@@ -377,7 +395,7 @@
       playBtn.addEventListener('click', async ()=>{
         const id=t.id; const cur=state.currentId && state.audios.get(state.currentId);
         if(state.currentId && state.currentId!==id){
-          cur.pause(); cur.currentTime=0; icon(doc(state.currentId),'play');
+          cur.pause(); cur.currentTime=0; const prev=doc(state.currentId); icon(prev,'play');
         }
         const a=state.audios.get(id);
 
@@ -420,17 +438,17 @@
         }
       });
 
-      // Vote / unvote
-      el.querySelector('.vote').addEventListener('click', async ()=>{
-        const scoreEl = el.querySelector('.score');
+      // Vote / unvote + animations
+      voteBtn.addEventListener('click', async ()=>{
         if(state.hasVoted.has(t.id)){
           const { error } = await supabase.from('votes').delete().match({ track_id:t.id, voter_token:state.voterToken });
           if(error){ console.error(error); toast('error: unvote'); return; }
           state.hasVoted.delete(t.id);
           state.counts.set(t.id, Math.max(0,(state.counts.get(t.id)||0)-1));
           scoreEl.textContent = state.counts.get(t.id);
-          el.querySelector('.vote').title='vote';
-          el.querySelector('.vote span:last-child').textContent='vote';
+          voteBtn.classList.remove('voted');
+          pop(voteBtn, '-1', '#ff9aa2');
+          bump(voteBtn);
           updateChartTargets();
           toast('vote removed');
         } else {
@@ -439,14 +457,28 @@
           state.hasVoted.add(t.id);
           state.counts.set(t.id, (state.counts.get(t.id)||0)+1);
           scoreEl.textContent = state.counts.get(t.id);
-          el.querySelector('.vote').title='remove vote';
-          el.querySelector('.vote span:last-child').textContent='-';
+          voteBtn.classList.add('voted');
+          pop(voteBtn, '+1', '#b9ffd0');
+          bump(voteBtn);
           updateChartTargets();
           toast('vote added');
         }
+        // re-tri immédiat
+        renderList();
       });
 
       return el;
+    }
+
+    function pop(btn, text, color){
+      const s=document.createElement('span');
+      s.className='pop'; s.textContent=text;
+      s.style.color=color; s.style.top='8px'; s.style.right='8px';
+      btn.appendChild(s);
+      setTimeout(()=> s.remove(), 650);
+    }
+    function bump(btn){
+      btn.classList.remove('bump'); void btn.offsetWidth; btn.classList.add('bump');
     }
 
     function doc(id){ return document.getElementById('list').querySelector(`.item[data-id="${id}"]`); }
@@ -479,7 +511,7 @@
       tick();
     }
 
-    /* ===== Camembert 3D animé ===== */
+    /* ===== Camembert 3D animé + labels sur parts ===== */
     function updateChartTargets(){
       const total = state.tracks.reduce((s,t)=> s + (state.counts.get(t.id)||0), 0);
       $total.textContent = 'votes: ' + total;
@@ -507,10 +539,13 @@
     function renderLegend(values, colors, names){
       const $legend=document.getElementById('legend'); $legend.innerHTML='';
       const sum = values.reduce((a,b)=>a+b,0);
-      values.forEach((v,i)=>{
+      // on affiche aussi en décroissant
+      const order=[...names.keys()].sort((i,j)=>(values[j]-values[i]));
+      order.forEach((i)=>{
+        const v=values[i], name=names[i], col=colors[i];
         const row=document.createElement('div'); row.className='row';
-        const sw=document.createElement('span'); sw.className='sw'; sw.style.background=colors[i];
-        const lb=document.createElement('span'); lb.className='label'; lb.textContent=names[i];
+        const sw=document.createElement('span'); sw.className='sw'; sw.style.background=col;
+        const lb=document.createElement('span'); lb.className='label'; lb.textContent=name;
         const val=document.createElement('span'); val.className='val'; val.textContent = v + (sum? '  ('+Math.round(100*v/Math.max(sum,1))+'%)':'');
         row.appendChild(sw); row.appendChild(lb); row.appendChild(val); $legend.appendChild(row);
       });
@@ -518,6 +553,12 @@
 
     function ease(t){ return 1 - Math.pow(1-t,3); }
     function lerp(a,b,t){ return a + (b-a)*t; }
+    function clampText(ctx, text, maxW){
+      if(ctx.measureText(text).width <= maxW) return text;
+      let t=text;
+      while(t.length>3 && ctx.measureText(t+'…').width>maxW){ t=t.slice(0,-1); }
+      return t+'…';
+    }
 
     function drawPie(){
       const depth = 14, r = 130, cx = canvas.width/2, cy = canvas.height/2 - 6;
@@ -534,6 +575,7 @@
       ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#000';
       ctx.beginPath(); ctx.ellipse(cx+6, cy+depth+8, r+6, r*0.65+6, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
 
+      // tranche 3D
       for(let z=depth; z>0; z--){
         angles.forEach((a,i)=>{
           ctx.beginPath();
@@ -543,12 +585,29 @@
         });
       }
 
+      // dessus + contour
       angles.forEach((a,i)=>{
         ctx.beginPath();
         ctx.moveTo(cx + Math.cos(a[0])*(r), cy + Math.sin(a[0])*(r));
         ctx.arc(cx, cy, r, a[0], a[1]); ctx.lineTo(cx, cy); ctx.closePath();
         ctx.fillStyle = state.chart.colors[i]; ctx.fill();
         ctx.strokeStyle = '#08391f'; ctx.lineWidth = 2; ctx.stroke();
+      });
+
+      // labels sur les parts
+      ctx.font = '11px ui-monospace, monospace';
+      ctx.fillStyle = '#dafee0';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      state.chart.names.forEach((name,i)=>{
+        const a0=angles[i][0], a1=angles[i][1];
+        if(a1-a0 < 0.18) return; // pas assez de place
+        const mid=(a0+a1)/2;
+        const rx = cx + Math.cos(mid)*(r*0.62);
+        const ry = cy + Math.sin(mid)*(r*0.62);
+        // largeur approximative dispo
+        const arcLen = (a1-a0) * r * 0.9;
+        const text = clampText(ctx, name, Math.max(40, arcLen));
+        ctx.fillText(text, rx, ry);
       });
 
       if(state.chart.animT===1){ state.chart.fromAngles = state.chart.toAngles.map(p=>[p[0],p[1]]); }
@@ -560,7 +619,7 @@
       const nr = Math.max(0, Math.min(255, Math.round(r*f)));
       const ng = Math.max(0, Math.min(255, Math.round(g*f)));
       const nb = Math.max(0, Math.min(255, Math.round(b*f)));
-      return '#' + nr.toString(16).padStart(2,'0') + ng.toString(16).padStart(2,'0') + nb.toString(16,'0');
+      return '#' + nr.toString(16).padStart(2,'0') + ng.toString(16).padStart(2,'0') + nb.toString(16).padStart(2,'0');
     }
 
     // Realtime votes
@@ -574,10 +633,8 @@
             const tid = payload.old.track_id;
             state.counts.set(tid, Math.max(0,(state.counts.get(tid)||0)-1));
           }
-          state.tracks.forEach(t=>{
-            const el=doc(t.id); if(!el) return;
-            el.querySelector('.score').textContent = state.counts.get(t.id)||0;
-          });
+          // re-render pour trier + maj scores + camembert
+          renderList();
           updateChartTargets();
         })
         .subscribe();
