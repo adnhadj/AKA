@@ -13,6 +13,9 @@
     --design-w: 1280;
     --design-h: 720;
     --scale: min(100vw / var(--design-w), 100vh / var(--design-h));
+
+    /* Scale du logo (pris en compte dans l'animation spin) */
+    --logoScale: 1; /* desktop */
   }
 
   *{box-sizing:border-box}
@@ -33,11 +36,23 @@
   .flash.show{ opacity:1; }
 
   .logoStage{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:0}
-  .logo{ position:relative;width:min(72vmin,86vw);height:min(72vmin,86vh); background:#000 url('adn.png') center/contain no-repeat; animation:spin 6s linear infinite; image-rendering:pixelated }
+  .logo{
+    position:relative;
+    width:min(72vmin,86vw);
+    height:min(72vmin,86vh);
+    background:#000 url('adn.png') center/contain no-repeat;
+    animation:spin 6s linear infinite;
+    image-rendering:pixelated;
+  }
   .logo::before,.logo::after{content:"";position:absolute;inset:0;background:url('adn.png') center/contain no-repeat;mix-blend-mode:screen;pointer-events:none}
   .logo::before{opacity:.33;filter:hue-rotate(40deg) contrast(1.1);animation:glitchA 2.4s steps(6,end) infinite}
   .logo::after{opacity:.20;filter:hue-rotate(-20deg) contrast(1.15);animation:glitchB 2.1s steps(7,end) infinite reverse}
-  @keyframes spin{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
+
+  /* L’animation conserve le scale en continu */
+  @keyframes spin{
+    from{ transform: scale(var(--logoScale)) rotateY(0deg); }
+    to  { transform: scale(var(--logoScale)) rotateY(360deg); }
+  }
   @keyframes glitchA{0%{clip-path:inset(0 0 90% 0)}50%{clip-path:inset(60% 0 20% 0) translateX(-1px)}100%{clip-path:inset(0 0 90% 0)}}
   @keyframes glitchB{0%{clip-path:inset(10% 0 80% 0)}50%{clip-path:inset(20% 0 40% 0) translateX(1px)}100%{clip-path:inset(10% 0 80% 0)}}
 
@@ -122,25 +137,24 @@
   .modalScan{ position:absolute; left:-120%; right:-120%; top:0; height:2px; opacity:.4; background:linear-gradient(90deg, transparent, var(--neon), var(--neon-2), transparent); animation:scan 2s linear infinite; }
   @keyframes scan{ 0%{ transform:translateX(-40%) } 100%{ transform:translateX(40%) } }
 
-  /* ====== MOBILE (Méthode 2: zoom visuel du logo) ====== */
+  /* ====== MOBILE : zoom visuel du logo (via --logoScale) ====== */
   @media (max-width: 768px){
     html, body{ height:auto; min-height:100%; overflow:auto; }
     .fit{ height:auto; min-height:100dvh; overflow:visible; display:block; }
     .stage{ width:auto; height:auto; min-height:100%; transform:none; padding:12px; }
 
-    /* On réserve une zone raisonnable, et on zoome le logo visuellement */
     .logoStage{
       position:relative; inset:auto;
-      height:520px;          /* hauteur “conteneur” */
-      margin-bottom:6px;     /* rapproche du panel stats */
+      height:520px;          /* réserve l'espace */
+      margin-bottom:6px;     /* rapproché du premier panel */
       display:grid; place-items:center;
     }
     .logo{
       width:min(88vw, 360px);
       height:min(88vw, 360px);
-      transform: scale(3);           /* ← zoom visuel */
-      transform-origin: center center;   /* reste bien centré */
     }
+    /* On applique le zoom ici : */
+    :root{ --logoScale: 1.45; }
 
     .piePanel, .panel{ position:relative; left:auto; right:auto; top:auto; width:auto; max-height:none; z-index:auto; margin:0 0 12px 0; }
     #pie{ width:100%; height:auto; max-width:480px; }
@@ -200,7 +214,7 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const state = {
-      sortByVotes:false, // ordre fixe par défaut
+      sortByVotes:false, // ordre fixe par défaut (pas de re-tri auto au vote)
       voterToken: localStorage.getItem('adn_voter') || (localStorage.setItem('adn_voter', crypto.randomUUID()), localStorage.getItem('adn_voter')),
       audios:new Map(),
       currentId:null,
@@ -237,7 +251,7 @@
       return PIE_COLS.getPropertyValue(pool[i % pool.length]).trim();
     }
 
-    // 1 vote max — helpers (nécessite la fonction SQL 'switch_vote')
+    // 1 vote max — nécessite la fonction SQL 'switch_vote'
     function getMyVoteTrackId() {
       const ids = Array.from(state.hasVoted.values());
       return ids.length ? ids[0] : null;
