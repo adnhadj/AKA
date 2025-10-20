@@ -10,9 +10,8 @@
     --pieA:#00ff66; --pieB:#1be072; --pieC:#15c863; --pieD:#10b058; --pieE:#0b964b; --pieF:#087c3e; --pieG:#066435;
     --neon:#00ff99; --neon-2:#5affc1; --hot:#33ffd1; --hot2:#b7ffe9;
 
-    /* Desktop: scène de référence (UI identique) */
-    --design-w: 1280;  /* px */
-    --design-h: 720;   /* px */
+    --design-w: 1280;
+    --design-h: 720;
     --scale: min(100vw / var(--design-w), 100vh / var(--design-h));
   }
 
@@ -21,9 +20,12 @@
     height:100%;margin:0;background:var(--bg);color:var(--fg);
     font-family:ui-monospace,"Cascadia Code","Fira Code",Menlo,Consolas,monospace;font-size:15px;
     transition:filter .45s cubic-bezier(.22,1,.36,1);
-    overflow:hidden; /* desktop: pas de scroll, tout est dans .stage */
+    overflow:hidden;
   }
   html.neg{ filter: invert(1) hue-rotate(180deg) saturate(1.2) contrast(1.05); }
+
+  /* utilitaire */
+  .hidden{ display:none !important; }
 
   /* ====== SCÈNE DESKTOP (fixe + scalée) ====== */
   .fit{
@@ -86,8 +88,8 @@
   .item{
     position:relative;
     display:grid;
-    grid-template-columns:48px 1fr 116px;  /* vote un peu plus large */
-    column-gap:20px; row-gap:12px;        /* + d’air */
+    grid-template-columns:48px 1fr 116px;
+    column-gap:20px; row-gap:12px;
     align-items:center;
     border:2px solid var(--border); padding:12px; background:#03140b; border-radius:0;
     overflow:hidden; min-height:78px;
@@ -108,7 +110,6 @@
   }
   .play svg{ width:14px; height:14px; fill:currentColor; }
 
-  /* Effet au survol uniquement (pas en lecture) */
   .play:hover{
     box-shadow:0 0 8px var(--neon), inset 0 0 8px rgba(0,255,153,.25);
     border-color:#118f5f; color:var(--neon);
@@ -153,19 +154,17 @@
     background:repeating-linear-gradient(90deg,#00ff66 0 8px,#14c977 8px 16px)}
   .meta{font-size:12px;color:var(--muted);line-height:1}
 
-  /* ===== Vote button (uniquement le compteur) + animations ===== */
+  /* Vote button + animations */
   .vote{
     position:relative;
     display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:44px;
     border:2px solid var(--border); background:#062011; color:var(--accent);
-    overflow:hidden;
-    isolation:isolate;
+    overflow:hidden; isolation:isolate;
   }
   .score{font-weight:700;color:#b9ffd0; font-size:16px; line-height:1;}
   .vote.voted{ border-color:#10a86b; box-shadow:0 0 8px rgba(0,255,153,.35) inset; }
 
-  /* bump + halo */
   @keyframes voteBump{ 0%{transform:scale(1)} 40%{transform:scale(1.16)} 100%{transform:scale(1)} }
   @keyframes voteHalo{ 0%{opacity:.7; transform:scale(1)} 100%{opacity:0; transform:scale(2)} }
   .vote.bump .score{ animation:voteBump .35s ease-out; }
@@ -174,7 +173,6 @@
     filter:blur(0.5px); opacity:0; border-radius:0; animation:voteHalo .5s ease-out forwards;
   }
 
-  /* Confettis néon */
   .confetti{
     position:absolute; width:6px; height:6px; pointer-events:none; z-index:2;
     background:linear-gradient(135deg, var(--neon), var(--hot2));
@@ -236,36 +234,19 @@
   }
   @keyframes scan{ 0%{ transform:translateX(-40%) } 100%{ transform:translateX(40%) } }
 
-  /* ====== VERSION MOBILE (empilée, scroll) ====== */
+  /* ====== VERSION MOBILE ====== */
   @media (max-width: 768px){
-    /* PATCH SCROLL MOBILE */
-    html, body{
-      height:auto; min-height:100%; overflow:auto;
-    }
-    .fit{
-      height:auto; min-height:100dvh; overflow:visible; display:block;
-    }
-    .stage{
-      width:auto; height:auto; min-height:100%;
-      transform:none; padding:12px;
-    }
+    html, body{ height:auto; min-height:100%; overflow:auto; }
+    .fit{ height:auto; min-height:100dvh; overflow:visible; display:block; }
+    .stage{ width:auto; height:auto; min-height:100%; transform:none; padding:12px; }
 
-    /* Logo BEAUCOUP plus grand */
-    .logoStage{
-      position:relative; inset:auto; height:520px; margin-bottom:12px;
-      display:grid; place-items:center;
-    }
+    /* Logo très grand */
+    .logoStage{ position:relative; inset:auto; height:520px; margin-bottom:12px; display:grid; place-items:center; }
     .logo{ width:300px; height:300px; }
 
-    .piePanel, .panel{
-      position:relative; left:auto; right:auto; top:auto; width:auto;
-      max-height:none; z-index:auto; margin:0 0 12px 0;
-    }
+    .piePanel, .panel{ position:relative; left:auto; right:auto; top:auto; width:auto; max-height:none; z-index:auto; margin:0 0 12px 0; }
     .list{ max-height:none; overflow:visible; }
-    .item{
-      grid-template-columns:44px 1fr 100px; min-height:68px;
-      column-gap:18px; row-gap:10px;
-    }
+    .item{ grid-template-columns:44px 1fr 100px; min-height:68px; column-gap:18px; row-gap:10px; }
     .cell-play{ width:44px; height:44px; }
     .play{ width:40px; height:40px; }
 
@@ -284,7 +265,7 @@
       <div class="logoStage"><div class="logo"></div></div>
 
       <!-- Stats -->
-      <section class="piePanel">
+      <section class="piePanel" id="statsPanel">
         <header class="titlebar"><span>~/stats</span><span id="totalVotes">votes: 0</span></header>
         <div class="box" style="display:grid;grid-template-columns:1fr;justify-items:center">
           <canvas id="pie" width="320" height="320" style="border:2px solid var(--border);background:#03140b"></canvas>
@@ -293,14 +274,14 @@
       </section>
 
       <!-- Tracks -->
-      <section class="panel">
+      <section class="panel" id="tracksPanel">
         <header class="titlebar">
           <span>~/tracks</span>
           <div class="controls">
             <button id="sortBtn" title="tri par votes">sort --by=votes</button>
           </div>
         </header>
-        <div class="box muted" id="hint">VOTE POUR TES MAQUETTE FAVORIS</div>
+        <div class="box muted" id="hint">VOTE POUR TON FAV</div>
         <div class="box list" id="list" aria-live="polite"></div>
       </section>
 
@@ -325,7 +306,7 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const state = {
-      sortByVotes:true,        // tri décroissant par défaut
+      sortByVotes:true,
       voterToken: localStorage.getItem('adn_voter') || (localStorage.setItem('adn_voter', crypto.randomUUID()), localStorage.getItem('adn_voter')),
       audios:new Map(),
       currentId:null,
@@ -344,17 +325,14 @@
     const canvas=document.getElementById('pie');
     const ctx=canvas.getContext('2d');
     const $flash=document.getElementById('flash');
+    const $tracksPanel=document.getElementById('tracksPanel');
+    const $statsPanel=document.getElementById('statsPanel');
 
     // ---- Modal d’accueil (une seule fois) ----
     const $welcome=document.getElementById('welcome');
     const $welcomeOk=document.getElementById('welcomeOk');
-    if(!localStorage.getItem('adn_intro_seen')){
-      $welcome.classList.add('show');
-    }
-    $welcomeOk.addEventListener('click', ()=>{
-      $welcome.classList.remove('show');
-      localStorage.setItem('adn_intro_seen','1');
-    });
+    if(!localStorage.getItem('adn_intro_seen')){ $welcome.classList.add('show'); }
+    $welcomeOk.addEventListener('click', ()=>{ $welcome.classList.remove('show'); localStorage.setItem('adn_intro_seen','1'); });
 
     const fmt=s=>{ if(!isFinite(s)) return '0:00'; const m=Math.floor(s/60), ss=String(Math.floor(s%60)).padStart(2,'0'); return `${m}:${ss}`; };
     const toast=m=>{ $toast.textContent=m; $toast.classList.add('show'); setTimeout(()=> $toast.classList.remove('show'), 1200); };
@@ -370,7 +348,7 @@
     setupRealtime();
     startTicker();
 
-    // --- Data ---
+    /* ===== Chargement & visibilité ===== */
     async function loadData(){
       const [{data:tracks,error:tErr},{data:allVotes,error:vErr},{data:mine,error:mErr}] = await Promise.all([
         supabase.from('tracks').select('id,title,url,created_at'),
@@ -381,24 +359,31 @@
       if(vErr){ console.error(vErr); }
       if(mErr){ console.error(mErr); }
 
-      state.tracks = tracks||[];
+      // Garde uniquement les tracks valides avec URL
+      const valid = (tracks||[]).filter(t => t && t.url && String(t.url).trim() !== '');
+      state.tracks = valid;
+
       state.counts = new Map();
       (allVotes||[]).forEach(v=> state.counts.set(v.track_id,(state.counts.get(v.track_id)||0)+1));
       state.hasVoted = new Set((mine||[]).map(v=> v.track_id));
+
+      updateVisibility();
       updateChartTargets();
     }
 
-    // --- UI ---
+    function updateVisibility(){
+      const hasTracks = state.tracks.length > 0;
+      $tracksPanel.classList.toggle('hidden', !hasTracks);
+      $statsPanel.classList.toggle('hidden', !hasTracks);
+    }
+
+    /* ===== Liste ===== */
     function renderList(){
       $list.innerHTML='';
-      let data=[...state.tracks];
-      // tri décroissant
-      data.sort((a,b)=>(state.counts.get(b.id)||0)-(state.counts.get(a.id)||0));
+      if(!state.tracks.length){ return; } // rien à afficher
 
-      if(!data.length){
-        const p=document.createElement('pre'); p.className='muted'; p.style.margin='0'; p.textContent='$ ls -la  # empty';
-        $list.appendChild(p); return;
-      }
+      let data=[...state.tracks];
+      data.sort((a,b)=>(state.counts.get(b.id)||0)-(state.counts.get(a.id)||0));
       data.forEach(t=> $list.appendChild(row(t)));
     }
 
@@ -427,7 +412,7 @@
       const scoreEl = el.querySelector('.score');
       const rowFx  = el.querySelector('.rowFlash');
 
-      // Audio : réutilise s'il existe déjà
+      // Audio (création si besoin)
       let audio = state.audios.get(t.id);
       if(!audio){
         audio = new Audio(t.url); audio.preload='metadata';
@@ -442,7 +427,7 @@
       playBtn.addEventListener('mouseenter', ()=> el.classList.add('play-hover'));
       playBtn.addEventListener('mouseleave', ()=> el.classList.remove('play-hover'));
 
-      // Play/pause (sans effet persistant)
+      // Play/pause
       playBtn.addEventListener('click', async ()=>{
         const id=t.id; const cur=state.currentId && state.audios.get(state.currentId);
         if(state.currentId && state.currentId!==id){
@@ -489,7 +474,7 @@
         }
       });
 
-      // Vote / unvote + animations (flashy + confettis)
+      // Vote / unvote + animations
       voteBtn.addEventListener('click', async ()=>{
         const conf = ()=> confetti(voteBtn);
 
@@ -501,7 +486,7 @@
           scoreEl.textContent = state.counts.get(t.id);
           voteBtn.classList.remove('voted');
           bump(voteBtn);
-          conf(); conf(); // petite pluie
+          conf(); conf();
           updateChartTargets();
           toast('vote removed');
         } else {
@@ -512,7 +497,7 @@
           scoreEl.textContent = state.counts.get(t.id);
           voteBtn.classList.add('voted');
           bump(voteBtn);
-          conf(); conf(); conf(); // un peu plus à l’upvote
+          conf(); conf(); conf();
           updateChartTargets();
           toast('vote added');
         }
@@ -558,6 +543,7 @@
     function startTicker(){
       function tick(){
         state.raf = requestAnimationFrame(tick);
+        // si pas de tracks: ne rien faire ici
         state.audios.forEach((a,id)=>{
           const el=doc(id); if(!el||!a.duration) return;
           const p=a.currentTime/a.duration;
@@ -573,16 +559,25 @@
       tick();
     }
 
-    /* ===== Camembert 3D animé + labels sur parts ===== */
+    /* ===== Camembert 3D animé ===== */
     function updateChartTargets(){
+      // Si aucune track => reset UI stats + masquer panels déjà géré
+      if(!state.tracks.length){
+        $total.textContent = 'votes: 0';
+        $legend.innerHTML = '';
+        clearChart();
+        return;
+      }
+
       const total = state.tracks.reduce((s,t)=> s + (state.counts.get(t.id)||0), 0);
       $total.textContent = 'votes: ' + total;
       const names = state.tracks.map(t=> t.title);
       const values = state.tracks.map(t=> state.counts.get(t.id)||0);
       const sum = values.reduce((a,b)=>a+b,0);
+
       const toAngles = [];
       let acc= -Math.PI/2;
-      values.forEach((v)=>{
+      values.forEach((v, idx)=>{
         const frac = sum>0 ? v/sum : 1/Math.max(values.length,1);
         const a0 = acc; const a1 = acc + frac*2*Math.PI;
         toAngles.push([a0,a1]); acc=a1;
@@ -599,7 +594,8 @@
     }
 
     function renderLegend(values, colors, names){
-      const $legend=document.getElementById('legend'); $legend.innerHTML='';
+      $legend.innerHTML='';
+      if(!state.tracks.length){ return; }
       const sum = values.reduce((a,b)=>a+b,0);
       const order=[...names.keys()].sort((i,j)=>(values[j]-values[i]));
       order.forEach((i)=>{
@@ -621,7 +617,14 @@
       return t+'…';
     }
 
+    function clearChart(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+    }
+
     function drawPie(){
+      // rien à dessiner si pas de tracks
+      if(!state.tracks.length){ clearChart(); return; }
+
       const depth = 14, r = 130, cx = canvas.width/2, cy = canvas.height/2 - 6;
 
       if(state.chart.animT < 1){ state.chart.animT = Math.min(1, state.chart.animT + 0.08); }
@@ -661,7 +664,7 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       state.chart.names.forEach((name,i)=>{
         const a0=angles[i][0], a1=angles[i][1];
-        if(a1-a0 < 0.18) return; // pas assez de place
+        if(a1-a0 < 0.18) return;
         const mid=(a0+a1)/2;
         const rx = cx + Math.cos(mid)*(r*0.62);
         const ry = cy + Math.sin(mid)*(r*0.62);
@@ -693,7 +696,8 @@
             const tid = payload.old.track_id;
             state.counts.set(tid, Math.max(0,(state.counts.get(tid)||0)-1));
           }
-          // re-render pour trier + maj scores + camembert
+          // MAJ UI
+          updateVisibility();
           renderList();
           updateChartTargets();
         })
