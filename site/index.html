@@ -361,7 +361,7 @@
         const target  = t.id;
 
         const dec = (id) => state.counts.set(id, Math.max(0, (state.counts.get(id)||0) - 1));
-        const inc = (id) => state.counts.set(id, (state.counts.get(id)||0) + 1));
+        const inc = (id) => state.counts.set(id, (state.counts.get(id)||0) + 1);
 
         if (current === target) {
           dec(target);
