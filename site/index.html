@@ -85,7 +85,8 @@
   .track{ min-width:0; display:flex; flex-direction:column; gap:8px; }
   .track h3{ margin:0; font-size:14px; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; }
 
-  .progress{ position:relative;height:10px;border:2px solid var(--border); background:#071b10;overflow:hidden;cursor:pointer;border-radius:0 }
+  /* Empêche le scroll/gestures pendant le drag de la barre */
+  .progress{ position:relative;height:10px;border:2px solid var(--border); background:#071b10;overflow:hidden;cursor:pointer;border-radius:0; touch-action:none; }
   .progress:hover, .item.play-hover .progress{ box-shadow:0 0 8px var(--neon), inset 0 0 8px rgba(0,255,153,.18); border-color:#118f5f; animation:neonPulse 1.2s ease-in-out infinite; }
   .progress::after{ content:""; position:absolute; left:-120%; top:0; bottom:0; width:120%; background:linear-gradient(90deg, transparent 0%, var(--neon) 45%, var(--neon-2) 55%, transparent 100%); opacity:0; transform:skewX(-20deg); pointer-events:none; }
   .progress:hover::after, .item.play-hover .progress::after{ animation:btnScan 1.4s cubic-bezier(.22,1,.36,1) infinite; opacity:.25; }
@@ -119,6 +120,9 @@
   .toast{ position:absolute;left:16px;bottom:16px;border:2px solid var(--border);background:#03140b; padding:8px 10px;color:var(--accent);opacity:0;transform:translateY(8px);transition:.25s;border-radius:0;z-index:30 }
   .toast.show{opacity:1;transform:none}
 
+  /* Évite la propagation d’overscroll (rebond/chainage) */
+  .list, .panel, .piePanel{ overscroll-behavior: contain; }
+
   .list{scrollbar-width:thin;scrollbar-color:#0f3d22 #03140b}
   .list::-webkit-scrollbar{width:8px}
   .list::-webkit-scrollbar-thumb{background:#0f3d22}
@@ -145,15 +149,15 @@
 
     .logoStage{
       position:relative; inset:auto;
-      height:520px;          /* réserve l'espace */
-      margin-bottom:6px;     /* rapproché du premier panel */
+      height:560px;          /* réserve l'espace et rapproche du panel */
+      margin-bottom:6px;
       display:grid; place-items:center;
     }
     .logo{
-      width:min(88vw, 360px);
-      height:min(88vw, 360px);
+      width:min(88vw, 380px);
+      height:min(88vw, 380px);
     }
-    /* On applique le zoom ici : */
+    /* Zoom du logo mobile */
     :root{ --logoScale: 2.2; }
 
     .piePanel, .panel{ position:relative; left:auto; right:auto; top:auto; width:auto; max-height:none; z-index:auto; margin:0 0 12px 0; }
@@ -368,21 +372,75 @@
         else{ a.pause(); icon(el,'play'); setInvert(false); toast('pause'); }
       });
 
-      // seek
-      const progress=el.querySelector('.progress');
-      const onSeek = (ev, xRatio)=>{
-        const a=state.audios.get(t.id);
-        if(a && isFinite(a.duration)){
-          const ratio = xRatio!=null ? xRatio : (()=>{ const rect=progress.getBoundingClientRect(); return (ev.clientX-rect.left)/rect.width; })();
-          a.currentTime=Math.min(Math.max(0,ratio),1)*a.duration;
-        }
+      // ===== Seek (pointer + touch + clavier) — anti-scroll mobile =====
+      const progress = el.querySelector('.progress');
+
+      const onSeek = (evOrPoint, xRatio)=>{
+        const a = state.audios.get(t.id);
+        if(!a || !isFinite(a.duration)) return;
+
+        // evOrPoint peut être un PointerEvent / MouseEvent / Touch
+        const getX = ()=>{
+          if (typeof evOrPoint.clientX === 'number') return evOrPoint.clientX;
+          // Touch
+          if (evOrPoint && evOrPoint.clientX == null && evOrPoint.pageX != null) return evOrPoint.pageX;
+          return 0;
+        };
+
+        const ratio = xRatio != null
+          ? xRatio
+          : (()=>{ const rect = progress.getBoundingClientRect(); return (getX() - rect.left) / rect.width; })();
+
+        a.currentTime = Math.min(Math.max(0, ratio), 1) * a.duration;
       };
-      let seeking=false;
-      progress.addEventListener('pointerdown', (e)=>{ seeking=true; progress.setPointerCapture(e.pointerId); onSeek(e); });
-      progress.addEventListener('pointermove', (e)=>{ if(seeking) onSeek(e); });
-      progress.addEventListener('pointerup', (e)=>{ seeking=false; try{progress.releasePointerCapture(e.pointerId);}catch{} });
-      progress.addEventListener('keydown', (e)=>{ const a=state.audios.get(t.id); if(!a||!isFinite(a.duration)) return;
-        if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ const step = e.key==='ArrowRight' ? 5 : -5; a.currentTime = Math.min(Math.max(0,a.currentTime+step), a.duration); e.preventDefault(); } });
+
+      let seeking = false;
+
+      // POINTER EVENTS
+      progress.addEventListener('pointerdown', (e)=>{
+        seeking = true;
+        progress.setPointerCapture(e.pointerId);
+        onSeek(e);
+        e.preventDefault();                    // bloque le scroll pendant l’action
+      });
+      progress.addEventListener('pointermove', (e)=>{
+        if(!seeking) return;
+        onSeek(e);
+        e.preventDefault();
+      });
+      progress.addEventListener('pointerup', (e)=>{
+        seeking = false;
+        try{ progress.releasePointerCapture(e.pointerId); }catch{}
+        e.preventDefault();
+      });
+
+      // TOUCH EVENTS (fallback iOS/anciens) — passive:false
+      progress.addEventListener('touchstart', (e)=>{
+        seeking = true;
+        onSeek(e.touches[0]);
+        e.preventDefault();
+      }, { passive:false });
+
+      progress.addEventListener('touchmove', (e)=>{
+        if(!seeking) return;
+        onSeek(e.touches[0]);
+        e.preventDefault();
+      }, { passive:false });
+
+      progress.addEventListener('touchend', (e)=>{
+        seeking = false;
+        e.preventDefault();
+      }, { passive:false });
+
+      // Clavier
+      progress.addEventListener('keydown', (e)=>{
+        const a=state.audios.get(t.id); if(!a||!isFinite(a.duration)) return;
+        if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+          const step = e.key==='ArrowRight' ? 5 : -5;
+          a.currentTime = Math.min(Math.max(0,a.currentTime+step), a.duration);
+          e.preventDefault();
+        }
+      });
 
       // VOTE (1 max) — pas de re-tri automatique
       voteBtn.addEventListener('click', async ()=>{
